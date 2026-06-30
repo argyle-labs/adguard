@@ -1,0 +1,9 @@
+services:
+  adguard:
+    image: ghcr.io/scottdkey/adguard:latest
+    container_name: adguard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /opt/adguard/config:/config
