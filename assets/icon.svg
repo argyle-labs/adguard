@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="tile"><rect x="16" y="16" width="480" height="480" rx="108"/></clipPath>
+    <pattern id="argyle" width="120" height="160" patternUnits="userSpaceOnUse">
+      <rect width="120" height="160" fill="#0A120B"/>
+      <polygon points="60,0 120,80 60,160 0,80" fill="#233F26"/>
+      <polygon points="0,0 60,80 0,160" fill="#152717"/>
+      <polygon points="120,0 60,80 120,160" fill="#152717"/>
+      <g stroke="#68BC71" stroke-width="2" opacity="0.30" stroke-dasharray="6 7">
+        <path d="M60 -80 L200 80 M60 -80 L-80 80 M60 80 L200 240 M60 80 L-80 240 M60 240 L200 400 M60 240 L-80 400"/>
+      </g>
+    </pattern>
+  </defs>
+  <g clip-path="url(#tile)"><rect x="16" y="16" width="480" height="480" fill="url(#argyle)"/></g>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="none" stroke="#2BD3D3" stroke-width="6"/>
+  <g transform="translate(142.0 142.0) scale(9.5)" fill="#68BC71"><path d="M12 0C8.249 0 3.725.861 0 2.755 0 6.845-.051 17.037 12 24 24.051 17.037 24 6.845 24 2.755 20.275.861 15.751 0 12 0zm-.106 15.429L6.857 9.612c.331-.239 1.75-1.143 2.794.042l2.187 2.588c.009-.001 5.801-5.948 5.815-5.938.246-.22.694-.503 1.204-.101l-6.963 9.226z"/></g>
+</svg>
