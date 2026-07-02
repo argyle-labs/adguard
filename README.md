@@ -14,7 +14,7 @@ This repo is **self-contained** — the steps below run adguard **by hand, witho
 
 ## Run it without orca
 
-### Docker / Podman
+### Docker Compose
 
 ```yaml
 # compose.yml
@@ -36,7 +36,25 @@ services:
 docker compose up -d
 ```
 
-Podman: the same file with `podman-compose up -d`.
+### Other runtimes
+
+**Podman** — the compose above works with `podman compose up -d`, or run it directly:
+
+```sh
+podman run -d --name adguard --restart unless-stopped \
+    -p 53:53/tcp \
+    -p 53:53/udp \
+    -p 3000:3000/tcp \
+    -v ./work:/opt/adguardhome/work \
+    -v ./conf:/opt/adguardhome/conf \
+    adguard/adguardhome:latest
+```
+
+**LXC** — on a container-capable LXC (e.g. a Proxmox LXC with nesting enabled) run the same image via Docker/Podman as above, or install adguard from upstream directly on the guest: <https://github.com/AdguardTeam/AdGuardHome>.
+
+**VM** — install adguard from upstream (<https://github.com/AdguardTeam/AdGuardHome>) or run the same container image inside the VM; expose port `53`.
+
+**Unraid** — add via *Community Applications*, or *Docker → Add Container* with image `adguard/adguardhome:latest`, port `53`, and the volume paths above.
 
 ### Ports & data
 
