@@ -19,6 +19,5 @@ instance via its HTTP API (`/control/*`):
 - **Query log / stats** — read for observability.
 - **Status/health** — protection on/off, running state.
 
-Reference: the deployed instance's DNS chain, rewrites, and rebind exceptions are
-documented in [`adguard.md`](adguard.md); the private meerkat repo holds the
-environment-specific values (real IPs, the actual rewrite table).
+Reference: the DNS chain, rewrites, and rebind exceptions are documented in
+[`adguard.md`](adguard.md).
