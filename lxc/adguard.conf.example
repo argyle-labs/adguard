@@ -1,0 +1,28 @@
+# Proxmox LXC config for AdGuard Home — /etc/pve/lxc/<vmid>.conf
+#
+# Service: AdGuard Home (DNS ad-blocker + DNS server)
+# Ports:   53 (DNS, tcp+udp), 3000 (initial setup wizard), 80 (web UI after setup)
+#
+# Right-sized as captured from a live host: 1 core / 512 MB RAM / 8 GB disk.
+
+arch: amd64
+cores: 1
+memory: 512
+swap: 512
+hostname: adguard
+ostype: debian
+unprivileged: 1
+onboot: 1
+features: nesting=1,keyctl=1
+rootfs: local-lvm:vm-<vmid>-disk-1,size=8G
+
+# Network — a static IP is strongly recommended for a DNS server so clients
+# can point at a stable address. Replace with your LAN addressing.
+# hwaddr is auto-assigned by Proxmox on create; do not hard-code one.
+net0: name=eth0,bridge=vmbr0,ip=10.0.0.201/24,gw=10.0.0.1,ip6=dhcp,type=veth
+
+# Backup bind mount (host must have this path available, e.g. via fstab)
+mp0: /mnt/<pool>/backups/services/adguard,mp=/mnt/backups
+
+timezone: America/Adak
+tags: adblock;community-script
