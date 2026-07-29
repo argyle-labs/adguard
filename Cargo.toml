@@ -16,9 +16,9 @@ crate-type = ["rlib"]
 name = "adguard"
 path = "src/main.rs"
 
-# adguard is a BACKEND-ONLY orca plugin: zero #[orca_tool]s. It registers a
-# ServiceBackend across the cdylib FFI seam and reaches the whole orca system
-# through plugin-toolkit alone.
+# adguard is a BACKEND-ONLY orca plugin: zero #[orca_tool]s. It is a subprocess
+# [[bin]] that registers a ServiceBackend and talks to the orca daemon over its
+# Unix socket via the serve_service_plugin! macro from plugin-toolkit.
 [dependencies]
 plugin-toolkit = { git = "https://github.com/argyle-labs/orca", branch = "main" }
 
