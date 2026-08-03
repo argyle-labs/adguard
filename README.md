@@ -77,10 +77,12 @@ orca drives this plugin through the single generic `service.*` surface — no pe
 
 ```sh
 orca service.deploy adguard      # render + launch on any supported runtime
-orca service.status adguard      # health + rich diagnostics (typed payload)
+orca service.status adguard      # health + rich diagnostics (typed payload) — planned, not yet implemented
 orca service.backup adguard      # location-agnostic backup (tar; PBS on Proxmox)
-orca service.configure adguard   # apply config via the upstream API
+orca service.configure adguard   # apply config via the upstream API — planned, not yet implemented
 ```
+
+> Note: `service.status` and `service.configure` are planned but not yet implemented — both currently return an unimplemented error. See `roadmap.md`.
 
 ## Layout
 
