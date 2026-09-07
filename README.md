@@ -6,9 +6,9 @@
 
 AdGuard Home is a network-wide DNS server that blocks ads and trackers for every device pointed at it.
 
-A first-party [orca](https://github.com/argyle-labs/orca) plugin (service-backend).
+A first-party [orca](https://github.com/argyle-labs/orca) plugin: first-class CRUD over an already-running AdGuard Home instance's DNS rewrites (plus a status read) over its REST API — so you stop hand-editing `AdGuardHome.yaml`.
 
-This repo is **self-contained** — the steps below run adguard **by hand, without orca**. orca automates exactly this (same image, ports, and data) through one generic surface.
+This repo is **self-contained** — the steps below run adguard **by hand, without orca**. orca then drives the running instance's DNS rewrites through the tools below.
 
 ---
 
@@ -69,24 +69,30 @@ podman run -d --name adguard --restart unless-stopped \
 
 Back up the config/data volume(s) above — that's the whole service state (stop the container first for a clean copy). Restore by putting them back and starting it.
 
-> With orca this is **`service.backup` / `service.restore`** — location-agnostic (docker / podman / lxc / vm), one command regardless of where adguard runs. No per-service backup script.
-
 ## With orca
 
-orca drives this plugin through the single generic `service.*` surface — no per-plugin tools:
+Register a running AdGuard Home instance as an endpoint, then drive its DNS rewrites over the REST API:
 
 ```sh
-orca service.deploy adguard      # render + launch on any supported runtime
-orca service.status adguard      # health + rich diagnostics (typed payload) — planned, not yet implemented
-orca service.backup adguard      # location-agnostic backup (tar; PBS on Proxmox)
-orca service.configure adguard   # apply config via the upstream API — planned, not yet implemented
+# Register the instance (routes are an ordered, reachable-first fallback list).
+orca adguard.create --name home --username admin \
+    --route lan=http://10.0.0.5:80 --insecure false --enabled true
+orca adguard.list                                    # registered endpoints
+orca adguard.status --name home                      # version + running/protection
+
+# DNS rewrites
+orca adguard.rewrite.list --name home
+orca adguard.rewrite.add    --name home --domain service.example.com --answer 10.0.0.9
+orca adguard.rewrite.set    --name home --domain service.example.com --answer 10.0.0.9  # idempotent upsert
+orca adguard.rewrite.delete --name home --domain service.example.com --answer 10.0.0.9
 ```
 
-> Note: `service.status` and `service.configure` are planned but not yet implemented — both currently return an unimplemented error. See `roadmap.md`.
+The admin password lives in orca's abstract secrets domain (`adguard.<endpoint>.password`), never a plaintext column. Auth is HTTP Basic; `--insecure true` skips TLS verification for a self-signed https front-end.
 
 ## Layout
 
-- `src/` — the plugin (pure Rust): the `ServiceBackend` descriptor + `configure` / `status`.
+- `src/lib.rs` — the AdGuard Home REST client (`Config`, rewrite/status ops).
+- `src/tools.rs` — the `#[endpoint_resource]` registry + `adguard.*` tools.
+- `src/main.rs` — the `Plugin` builder entrypoint.
 - `docs/` — standalone operator notes.
-- [CAPABILITIES.md](CAPABILITIES.md) — the service-backend contract checklist.
 - `assets/` — plugin icon.
