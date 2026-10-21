@@ -10,6 +10,8 @@
 //!   - `adguard.rewrite.delete`   delete the rewrite matching (domain, answer)
 //!   - `adguard.rewrite.set`      idempotent upsert: point `domain` at `answer`
 //!   - `adguard.status`           version + running/protection flags
+//!   - `adguard.dns_config.get`   DNS server settings (`/control/dns_info`)
+//!   - `adguard.dns_config.set`   partial update of DNS settings, verified by read-back
 //!
 //! Imports flow through `plugin_toolkit::prelude::*` only.
 
@@ -141,4 +143,46 @@ async fn adguard_rewrite_set(args: RewriteArgs, _ctx: &ToolCtx) -> Result<Rewrit
     let cfg = resolve_config(&args.name).await?;
     let client = cfg.build_client()?;
     Ok(crate::set_rewrite(&client, &cfg, &args.domain, &args.answer).await?)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// adguard.dns_config.get / adguard.dns_config.set
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Read the DNS server settings (upstreams, bootstrap, cache, rate limit,
+/// blocking mode, ...) as AdGuard Home reports them.
+#[orca_tool(domain = "adguard", verb = "dns_config.get", role = "any")]
+async fn adguard_dns_config_get(
+    args: EndpointArgs,
+    _ctx: &ToolCtx,
+) -> Result<plugin_toolkit::serde_json::Value> {
+    let cfg = resolve_config(&args.name).await?;
+    let client = cfg.build_client()?;
+    Ok(crate::dns_config(&client, &cfg).await?)
+}
+
+#[derive(clap::Args, Serialize, Deserialize, JsonSchema)]
+pub struct DnsConfigSetArgs {
+    /// Registered adguard endpoint name.
+    #[arg(long)]
+    pub name: String,
+    /// JSON object of `dns_info` keys to change, e.g.
+    /// `{"upstream_dns":["https://dns.example/dns-query"],"cache_size":4194304}`.
+    /// Keys not given keep their values.
+    #[arg(long)]
+    pub patch: String,
+}
+
+/// [MUTATES STATE] Change the given DNS settings through `/control/dns_config`,
+/// then read them back and fail unless every patched key took. Returns the
+/// settings after the change.
+#[orca_tool(domain = "adguard", verb = "dns_config.set", data_mutation = true)]
+async fn adguard_dns_config_set(
+    args: DnsConfigSetArgs,
+    _ctx: &ToolCtx,
+) -> Result<plugin_toolkit::serde_json::Value> {
+    let patch = crate::parse_patch(&args.patch)?;
+    let cfg = resolve_config(&args.name).await?;
+    let client = cfg.build_client()?;
+    Ok(crate::patch_dns_config(&client, &cfg, &patch).await?)
 }

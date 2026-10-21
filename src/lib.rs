@@ -278,6 +278,67 @@ pub async fn set_rewrite(
     Ok(desired)
 }
 
+pub async fn dns_config(
+    client: &reqwest::Client,
+    cfg: &Config,
+) -> Result<plugin_toolkit::serde_json::Value, AdguardError> {
+    let resp = client
+        .get(cfg.control_url("dns_info"))
+        .send()
+        .await
+        .map_err(transport)?;
+    let status = resp.status();
+    let body = resp.text().await.map_err(transport)?;
+    if !status.is_success() {
+        return Err(AdguardError::Api {
+            status: status.as_u16(),
+            body,
+        });
+    }
+    plugin_toolkit::serde_json::from_str(&body).map_err(|e| AdguardError::Malformed(e.to_string()))
+}
+
+pub fn parse_patch(
+    raw: &str,
+) -> Result<plugin_toolkit::serde_json::Map<String, plugin_toolkit::serde_json::Value>, AdguardError>
+{
+    match plugin_toolkit::serde_json::from_str(raw) {
+        Ok(plugin_toolkit::serde_json::Value::Object(m)) if !m.is_empty() => Ok(m),
+        Ok(_) => Err(AdguardError::Malformed(
+            "patch must be a non-empty JSON object".into(),
+        )),
+        Err(e) => Err(AdguardError::Malformed(format!("patch: {e}"))),
+    }
+}
+
+pub fn untaken(
+    patch: &plugin_toolkit::serde_json::Map<String, plugin_toolkit::serde_json::Value>,
+    after: &plugin_toolkit::serde_json::Value,
+) -> Vec<String> {
+    patch
+        .iter()
+        .filter(|(k, v)| after.get(k.as_str()) != Some(*v))
+        .map(|(k, _)| k.clone())
+        .collect()
+}
+
+pub async fn patch_dns_config(
+    client: &reqwest::Client,
+    cfg: &Config,
+    patch: &plugin_toolkit::serde_json::Map<String, plugin_toolkit::serde_json::Value>,
+) -> Result<plugin_toolkit::serde_json::Value, AdguardError> {
+    post_ok(client, &cfg.control_url("dns_config"), patch).await?;
+    let after = dns_config(client, cfg).await?;
+    let missed = untaken(patch, &after);
+    if !missed.is_empty() {
+        return Err(AdguardError::Malformed(format!(
+            "adguard did not take dns config keys: {}",
+            missed.join(", ")
+        )));
+    }
+    Ok(after)
+}
+
 /// POST a JSON body and treat any 2xx as success (AdGuard's write endpoints
 /// answer 200 with an empty/uninteresting body).
 async fn post_ok<B: Serialize>(
@@ -365,5 +426,24 @@ mod tests {
             "http://host:80/control/rewrite/list"
         );
         assert_eq!(cfg.control_url("/status"), "http://host:80/control/status");
+    }
+
+    #[test]
+    fn patch_must_be_a_non_empty_object() {
+        assert!(parse_patch(r#"{"upstream_dns":["https://dns.example/dns-query"]}"#).is_ok());
+        assert!(parse_patch("{}").is_err());
+        assert!(parse_patch("[1]").is_err());
+        assert!(parse_patch("nope").is_err());
+    }
+
+    #[test]
+    fn untaken_lists_keys_the_read_back_does_not_match() {
+        let patch =
+            parse_patch(r#"{"ratelimit":30,"cache_size":4194304,"blocking_mode":"refused"}"#)
+                .unwrap();
+        let after = plugin_toolkit::serde_json::json!({
+            "ratelimit": 30, "cache_size": 1024, "upstream_dns": []
+        });
+        assert_eq!(untaken(&patch, &after), vec!["blocking_mode", "cache_size"]);
     }
 }
