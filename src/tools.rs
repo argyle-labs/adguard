@@ -45,16 +45,9 @@ pub struct AdguardEndpoint {
 /// plus the secure-first admin password.
 pub(crate) async fn resolve_config(name: &str) -> Result<Config> {
     let row = endpoint_db::require(name)?;
-    // Prefer the abstract secrets domain (`adguard.<endpoint>.password`), falling
-    // back to a legacy plaintext column value only if the domain has none.
-    let password = plugin_toolkit::secrets::resolve_scoped(
-        "adguard",
-        name,
-        "password",
-        (!row.password.is_empty()).then_some(row.password.as_str()),
-    )?;
+    let password = plugin_toolkit::secrets::resolve_scoped("adguard", name, "password")?;
     let base_url = route::resolve_reachable(name, &row.routes, row.insecure).await?;
-    Ok(Config::new(base_url, row.username, password).insecure(row.insecure))
+    Ok(Config::new(base_url, row.username, password.expose_secret()).insecure(row.insecure))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
